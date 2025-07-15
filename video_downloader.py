@@ -5,7 +5,7 @@ import subprocess
 import shutil
 
 
-def download_video_with_audio(url, output_path='D:\\AI-video-maker\\final work\\raw_video'):
+def download_video_with_audio(url, output_path='raw_video'):
     try:
         # Create a YouTube object
         yt = YouTube(url)
@@ -24,6 +24,9 @@ def download_video_with_audio(url, output_path='D:\\AI-video-maker\\final work\\
             print("Error: No suitable video stream found.")
             return None
 
+        # Ensure the output directory exists
+        os.makedirs(output_path, exist_ok=True)
+        
         # Ensure the filename is "video_with_audio.mp4"
         output_file_path = os.path.join(output_path, "video.mp4")
         print(f"Downloading video with audio: {yt.title} ({video_stream.resolution})")
@@ -51,18 +54,19 @@ def extract_audio_from_video(video_path, output_path):
         print(f"Error: {e}")
         return None
 
-def extract_subtitles(input_audio, output_path='D:\\AI-video-maker\\final work\\raw_video'):
+def extract_subtitles(input_audio, output_path='raw_video'):
     try:
         # Run the command to extract subtitles
         subtitle_path = os.path.join(output_path, 'subtitles.srt')
-        command = f"stable-ts raw_video/audio.mp3 -o subtitles.srt --segment_level True --word_level False"
-        subprocess.run(command, shell=True)
+        command = f"stable-ts {input_audio} -o {subtitle_path} --segment_level True --word_level False"
+        
+        result = subprocess.run(command, shell=True, check=True, capture_output=True, text=True)
         print("Subtitle extraction completed!")
-        source_path = 'D:\\AI-video-maker\\final work\\subtitles.srt'
-        destination_path = 'D:\\AI-video-maker\\Final work\\raw_video'
-        shutil.move(source_path, destination_path)
-        print("file moved")
+        print(f"Subtitles saved to: {subtitle_path}")
 
+    except subprocess.CalledProcessError as e:
+        print(f"Error running stable-ts: {e}")
+        print(f"Error output: {e.stderr}")
     except Exception as e:
         print(f"Error: {e}")
 
@@ -86,5 +90,8 @@ if __name__ == "__main__":
             extract_subtitles(extracted_audio_path)
 
             # Delete the audio file after subtitle extraction
-            os.remove(extracted_audio_path)
-            print("Audio file deleted.")
+            try:
+                os.remove(extracted_audio_path)
+                print("Audio file deleted.")
+            except OSError as e:
+                print(f"Error deleting audio file: {e}")
